@@ -26,6 +26,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation(project(":data"))
+    implementation("androidx.room:room-runtime:2.7.1")
+    implementation("androidx.room:room-ktx:2.7.1")
     implementation(project(":core-ui"))
     implementation(project(":ads"))
     implementation("com.tom-roush:pdfbox-android:2.0.27.0")
