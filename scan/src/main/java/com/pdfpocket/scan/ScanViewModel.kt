@@ -21,6 +21,7 @@ data class ScanUiState(
     val margins: IntArray = intArrayOf(0, 0, 0, 0),
     val reviewIndex: Int? = null,
     val cameraReady: Boolean = false,
+    val pagesOpen: Boolean = false,
 )
 
 class ScanViewModel(app: Application) : AndroidViewModel(app) {
@@ -79,7 +80,21 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun finishReview() {
-        _state.value = _state.value.copy(reviewIndex = null, status = "Ready to export or recognise text")
+        _state.value = _state.value.copy(reviewIndex = null, pagesOpen = true, status = "Pages ready - export or recognise text")
+    }
+
+    fun openPages() {
+        if (pages.isEmpty()) return
+        _state.value = _state.value.copy(reviewIndex = null, pagesOpen = true, status = "Pages ready")
+    }
+
+    fun closePages() {
+        _state.value = _state.value.copy(pagesOpen = false, status = "Camera ready")
+    }
+
+    fun discard() {
+        pages.clear(); originals.clear()
+        _state.value = ScanUiState(status = "Camera ready", cameraReady = true)
     }
 
     fun retake() {
@@ -125,7 +140,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val bytes = runCatching { pdfRepo.imagesToPdf(pages.toList()) }
             bytes.onSuccess {
-                _state.value = _state.value.copy(output = it, status = "Exported ${pages.size} page(s) to PDF")
+                _state.value = _state.value.copy(output = it, pagesOpen = false, status = "Exported ${pages.size} page(s) to PDF")
                 Analytics.log(Analytics.EXPORT_SUCCESS, "scan_pdf")
             }.onFailure { _state.value = _state.value.copy(status = "Export failed: ${it.message}") }
         }
