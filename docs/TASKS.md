@@ -225,3 +225,61 @@ Rule: no code edit without its task entry here first. One task = one code commit
 - [x] **P11.5 — Remove QR and final release pass** — QR module, nav entry, dependencies, test and screenshot removed; on-device dump confirms only Tools/Scan/History/Settings tabs. Release build exit 0, apksigner v2 true, zipalign 16KB exit 0; unit tests pass.
   - Repo-wide — delete QR module, nav entry, deps, tests, store assets; rebuild, verify, screenshot.
   - Verify: no QR tab or code; all tests pass; apksigner v2 + zipalign; store copy and screenshots updated.
+
+
+## P12 — journey refinement: one intent, one screen, no dead ends
+
+Plan source: `docs/FLOWS3.md` (supersedes `docs/FLOWS2.md`). Each task below lists the changed files, the work and a Verify step. No task is ticked while a live check is blocked; use `[~]` with a BLOCKED reason instead.
+
+- [ ] **P12.1 — Disposable sessions and navigation**
+  - `pdf/PdfViewModel.kt`, `pdf/ToolSheet.kt`, `pdf/DocumentsScreen.kt`, `app/MainActivity.kt` — replace keyed singleton sessions with unique-id disposable sessions; hold source URIs and cache files instead of `ByteArray` in StateFlow; clear view state when the viewer closes; enforce Back: viewer → Documents → Tools, review → camera.
+  - What to do:
+    1. Give each tile tap a unique `sessionId`; key the ViewModel by it; clear the session on exit.
+    2. Replace `PdfUiState.viewBytes` / `output` byte arrays with cache-file paths and source URIs.
+    3. Make every tool session start with its own empty file list and selection; add isolation assertions.
+    4. Wire Back through viewer, Documents and tool screens; no dead-end returns.
+  - Verify: JVM session test — open View on file X, exit, then Merge shows zero files; V1 merge of 3+5 page fixtures yields 8 pages; V5 instrumented open doc → back → back → View PDF shows the list, not the viewer.
+
+- [ ] **P12.2 — Documents v2**
+  - `pdf/DocumentsScreen.kt`, `data/` (Room `RecentFile`), `app/` (persisted tree URIs) — Recents from Room, Folders from persisted SAF tree grants, Add folder and Browse files, name search, lazy thumbnails, honest empty state.
+  - What to do:
+    1. Add a persisted-folder store and query its PDFs lazily.
+    2. Show Recents → Folders → Add folder → Browse files in that order; filter rows by name.
+    3. Row tap → locked? inline password dialog → Viewer; Cancel clears lock state and returns to list.
+    4. Re-entering View PDF always lands on the list.
+  - Verify: V6 instrumented — seed an app-owned PDF into MediaStore and see its row; empty state offers Add folder and Browse files and the picker opens; V5 holds for re-entry.
+
+- [ ] **P12.3 — Tool shell, Merge list, page-tool rules, Result screen**
+  - `pdf/` — replace `ModalBottomSheet` with full-screen Tool screens (top bar + sticky action bar); unified Result screen with Save / Share / Preview; per-tool selection rules; Merge row remove/reorder/per-file password; whole-document Compress/Unlock/Protect.
+  - What to do:
+    1. Build the full-screen tool shell and shared Result screen with cache-file output, FileProvider share and in-memory preview.
+    2. Merge: per-file page count/encryption/password, drag reorder, remove, Add more, action `Merge N files · M pages`, disabled below 2 or while locked.
+    3. Page tools: full-screen 3-column lazy grid, All/None/Invert and `2-5, 8` range field; defaults per FLOWS3 table; delete-all refused; To images exports one JPEG per selected page.
+    4. Compress presets with before/after estimate; Unlock/Protect password on the control screen with inline error.
+  - Verify: V2 `extractIndices(bytes, [1,3])` on a 5-page fixture returns pages 2 and 4 with matching sizes; V3 Delete starts empty and refuses deleting all; V4 one test per tool honours selection and To images returns N JPEGs.
+
+- [ ] **P12.4 — Scan v2**
+  - `scan/ScanScreen.kt`, `scan/ScanViewModel.kt`, `scan/ScanCropper.kt` — edge-to-edge camera, ImageAnalysis detection, animated border states, corner-handle review, Pages screen, reachable Export/OCR, discard prompt.
+  - What to do:
+    1. Hide system bars, fill preview to window bounds; close and flash controls at top.
+    2. Replace `takePicture` polling with throttled `ImageAnalysis` (KEEP_ONLY_LATEST, downscaled luma, smoothed corners) and `rememberInfiniteTransition` for Searching; solid Locked state with haptic tick; grace period before falling back.
+    3. Bottom bar: last thumbnail, shutter, `Done (n)`; capture → Review with 4 draggable corners (sliders fallback), filters, rotate, Retake, Add page.
+    4. Done → Pages grid with reorder/delete; only there do Export PDF and Recognise text appear; unsaved exit asks Discard n pages?
+  - Verify: V7 instrumented — preview bounds equal window bounds and border phase differs between frames; V8 — fixture JPEG through addPage → Done → Export and Recognise nodes exist and a PDF is produced.
+
+- [ ] **P12.5 — QR residue and Room migration**
+  - `app/build.gradle.kts`, `data/` (schema + migration), `app/HistoryScreen.kt`, `app/SettingsScreen.kt`, `docs/` — delete remaining zxing/QR residue and migrate the database safely.
+  - What to do:
+    1. Remove any `zxing`/`core` dependency and QR symbols from code and tests.
+    2. Bump `PocketDatabase` to version 2 with a migration dropping `qr_history`, preserving `recent_files` rows; export schema 1 and 2.
+    3. Remove legacy QR History section, QR insert from tests and QR from Settings subtitle.
+    4. Rewrite store title/short description/keywords/data-safety/deletion lines and update PRIVACY, STACK, UI, FLOWS and STATE description.
+  - Verify: V9 grep for qr/zxing/barcode in source and docs returns zero hits and apkanalyzer dex packages shows none; V10 Room `MigrationTestHelper` 1→2 opens with `recent_files` intact.
+
+- [ ] **P12.6 — Regression pass, release, screenshots**
+  - `docs/TASKS.md`, `docs/store/screenshots/`, release APK — full verification and store assets from the P12 release build.
+  - What to do:
+    1. Run unit + instrumented suites and release build; verify signature and 16KB alignment.
+    2. Regenerate five store screenshots from the P12 release build.
+    3. Record V12 device evidence (device, Android version, screenshots) or mark the specific check `[~]` with BLOCKED reason.
+  - Verify: V11 all commands exit 0; five screenshots newer than the release APK; V12 evidence in TASKS.md or an explicit BLOCKED line.

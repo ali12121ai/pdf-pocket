@@ -1,11 +1,10 @@
 {
   "project": "pdf-pocket",
-  "description": "Combined offline PDF + Scan/OCR + QR Android app, ad-supported with optional remove-ads IAP",
-  "plan_version": 2,
-  "last_session_date": "2026-11-24",
-  "next_task": "P6.1",
-  "next_task_status": "blocked",
-  "blocked_reason": "30-day launch measurement requires publishing to Google Play, real AdMob IDs and real users",
+  "description": "Offline Android PDF viewer, scanner, OCR and document tools, ad-supported with optional remove-ads IAP",
+  "plan_version": 3,
+  "last_session_date": "2026-11-26",
+  "next_task": "P12.1",
+  "next_task_status": "ready",
   "last_completed_task": "P11 complete: QR removed from app/deps/tests/store. View PDF became a Documents screen with device list and SAF fallback; every tool now owns its own keyed file selection and output; page tools gained a thumbnail page grid with checkboxes; Scan became a full-screen camera with animated document border and in-flight-guarded edge detection. Release signed (v2, zipalign 16KB), unit tests pass. Some live checks were blocked by emulator UI/camera instability. Previous: P10 complete: journey redesign — View opens device files and prompts for password inline, every tool picks its own file, Pick files tile removed, Scan auto-starts camera with auto-crop and a review step, Export/OCR appear only after capture. 6 unit + 8 instrumented tests pass; signed release (v2, zipalign 16KB) and screenshots refreshed. Previous: P9 complete: added PDF viewer with page navigation/zoom, encrypted-file detection, unlock and password protect, PDF-to-images, images-to-PDF, delete pages, crop, page numbers and watermark; sample PDFs now contain visible text. 6 unit + 7 instrumented tests pass; signed release rebuilt (v2, zipalign 16KB), store listing and screenshots refreshed. Previous: P8 complete: expressive second pass — gradient hero, press-animated tiles, per-tool bottom sheets replacing the long form, scan page thumbnails, QR copy/share, manual dark mode. Verified on device including the Merge sheet with sample files and Dark (active). Signed release rebuilt (v2, zipalign 16KB), five screenshots regenerated, 5 unit + 5 instrumented tests pass. Previous: P7 complete: UI redesign based on live top-app screenshots and iLovePDF redesign lessons — teal Material 3 theme, rounded tool cards, header/buttons/status components, redesigned Tools/Scan/QR/History/Settings, camera and QR polished, signed release rebuilt (v2, zipalign 16KB) and five store screenshots regenerated from the new build. 5 unit + 5 instrumented tests pass. Previous: P5 complete: AdMob/UMP/IAP integrated with test IDs and ad caps; signed release APK verified (v2 signature, zipalign 16KB) and launched; store listing, privacy policy and real screenshots written. P4 complete: QR generate/decode/batch/history verified by on-device test and live SAF PNG save. Previous: P3 gate complete: P3.1 CameraX capture -> multipage PDF verified on emulator with a 190KB SAF-saved 1-page PDF; P3.2 English OCR via ML Kit and Arabic via bundled Tesseract/cube data verified by on-device test (4 tests OK), with editable result and Copy button; Arabic accuracy remains experimental. Previous: P2 gate complete: P2.2 added rotate/reverse/move/compress with 3 JVM tests; found and fixed duplicate-page bug in importPage usage; live rotate saved /Rotate 90, reverse saved /Count 2, compress saved a 27KB PDF with 2 DCTDecode images. P2.3 added text and image stamps; on-device PdfStampTest extracted the stamped text; live SAF save produced a valid stamped PDF. Previous: P2.1: PDF merge + page extraction implemented with PdfRepository/PdfViewModel and a Compose tool UI; verified on emulator-5554 by merging two sample PDFs into a 5-page file, saving through the system SAF picker, pulling the file and counting 5 PDF page objects, then extracting pages 1-2 into a 2-page saved file; unit test still 1/1. Previous: P1 gate complete: P1.2 added Room entities/DAOs, FileGateway SAF export and cache cleanup; instrumented run via am instrument OK (2 tests) with no broad storage permission and both entities round-tripped; SAF picker UI check deferred to P2.1. P1.3 analytics events verified live in logcat after tab taps. Previous: P1.1: added core-ui/pdf/scan/qr/ads/data modules and a 5-tab Navigation Compose shell; assembleDebug exit 0; installed on emulator-5554 and tapped all five tabs, each rendered its own screen in uiautomator dumps; PdfMergeTest still 1/1. Release signing deferred to P5.2 (no keystore in repo). Previous: P0 gate complete: P0.1 build+test verified; P0.2 live AdMob/Play policy read and ad rules written; P0.3 incumbent paywall limits cited and five-promise wedge confirmed defensible; P0.4 platform/name/languages decided. P0.1: Gradle 8.13 + AGP 8.9.2 + Kotlin 2.1.20/Compose plugin project assembled on this machine; PdfMergeTest passed live (2-page + 3-page fixtures merged to 5 pages and reloaded via PDDocument.load); docs/STACK.md records resolved versions, licences and the PDFBoxResourceLoader font caveat.",
   "open_questions": [
     {
@@ -62,6 +61,16 @@
       "id": "D7",
       "decision": "v1 OCR languages: English + Arabic",
       "reason": "User decision 2026-11-23"
+    },
+    {
+      "id": "D8",
+      "decision": "P12 sessions are disposable unique-id sessions; only Recents survives",
+      "reason": "FLOWS3 principle 3: no stale files or output when a tool is reopened"
+    },
+    {
+      "id": "D9",
+      "decision": "Page tools honour selection; Compress, Unlock and Protect are whole-document tools",
+      "reason": "FLOWS3 table: destructive defaults must be safe and whole-document actions must not pretend to be page actions"
     }
   ],
   "phase_status": {
@@ -76,6 +85,7 @@
     "P8": "complete",
     "P9": "complete",
     "P10": "complete",
-    "P11": "complete"
+    "P11": "complete",
+    "P12": "planned"
   }
 }
