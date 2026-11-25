@@ -33,6 +33,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -70,9 +71,9 @@ private val PAGE_TOOLS = setOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ToolSheet(tool: ToolKey, onDismiss: () -> Unit) {
+fun ToolSheet(tool: ToolKey, sessionId: String, onDismiss: () -> Unit) {
     val context = LocalContext.current
-    val vm: PdfViewModel = viewModel(key = "tool-${tool.name}")
+    val vm: PdfViewModel = viewModel(key = sessionId)
     val ui by vm.state.collectAsState()
     var password by remember { mutableStateOf("") }
     var quality by remember { mutableStateOf("70") }
@@ -93,8 +94,13 @@ fun ToolSheet(tool: ToolKey, onDismiss: () -> Unit) {
     ) { uri -> if (uri != null) vm.save(context, uri) }
 
     LaunchedEffect(Unit) {
+        vm.setSession(sessionId)
         if (tool.images) imagePicker.launch(arrayOf("image/*"))
         else pdfPicker.launch(arrayOf("application/pdf"))
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { vm.dispose() }
     }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -109,11 +115,11 @@ fun ToolSheet(tool: ToolKey, onDismiss: () -> Unit) {
 
             when {
                 tool.images -> {
-                    if (ui.output == null) {
+                    if (ui.outputPath == null) {
                         Button(onClick = { imagePicker.launch(arrayOf("image/*")) }) { Text("Choose images") }
                     } else {
                         Text(ui.status)
-                        SaveOutput(ui.outputName, ui.output != null, saveLauncher, saveImageLauncher)
+                        SaveOutput(ui.outputName, ui.outputPath != null, saveLauncher, saveImageLauncher)
                     }
                 }
                 !ui.fileLoaded -> {
@@ -180,7 +186,7 @@ fun ToolSheet(tool: ToolKey, onDismiss: () -> Unit) {
 
                     Spacer(Modifier.height(8.dp))
                     Text(ui.status, style = MaterialTheme.typography.bodyMedium)
-                    SaveOutput(ui.outputName, ui.output != null, saveLauncher, saveImageLauncher)
+                    SaveOutput(ui.outputName, ui.outputPath != null, saveLauncher, saveImageLauncher)
                 }
             }
             Spacer(Modifier.height(24.dp))
@@ -211,11 +217,10 @@ private fun PageGrid(vm: PdfViewModel) {
     val ui by vm.state.collectAsState()
     val repo = remember { PdfRepository(context) }
     val bitmaps = remember { mutableStateMapOf<Int, Bitmap>() }
-    val bytes = ui.viewBytes
+    val bytes = PdfSessionStore.read(ui.viewPath)
 
     LaunchedEffect(ui.pageCount, bytes) {
-        if (ui.selectedPages.isEmpty() && ui.pageCount > 0) vm.selectAllPages()
-        bytes?.let { source ->
+                bytes?.let { source ->
             (0 until ui.pageCount).forEach { index ->
                 if (index !in bitmaps) {
                     runCatching { repo.renderPage(source, index) }.onSuccess { bitmaps[index] = it }

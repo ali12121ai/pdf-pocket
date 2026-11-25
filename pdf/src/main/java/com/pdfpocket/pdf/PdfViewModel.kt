@@ -19,13 +19,13 @@ data class PdfUiState(
     val fileNames: List<String> = emptyList(),
     val pageCount: Int = 0,
     val status: String = "No PDFs selected",
-    val output: ByteArray? = null,
+    val outputPath: String? = null,
     val outputName: String = "pdf-pocket-output.pdf",
     val needsPassword: Boolean = false,
     val fileLoaded: Boolean = false,
     val selectedPages: Set<Int> = emptySet(),
-    val viewBytes: ByteArray? = null,
-    val images: List<ByteArray> = emptyList(),
+    val viewPath: String? = null,
+    val imagePaths: List<String> = emptyList(),
 )
 
 class PdfViewModel(app: Application) : AndroidViewModel(app) {
@@ -34,6 +34,26 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
     val state: StateFlow<PdfUiState> = _state
     private val uris = mutableListOf<Uri>()
     private val sampleFiles = mutableListOf<File>()
+    private var sessionId = "default"
+
+    fun setSession(id: String) {
+        sessionId = id
+        PdfSessionStore.clear(getApplication<Application>().cacheDir, id)
+    }
+
+    fun dispose() {
+        PdfSessionStore.clear(getApplication<Application>().cacheDir, sessionId)
+        _state.value = PdfUiState()
+    }
+
+    private fun storeOutput(bytes: ByteArray, name: String = _state.value.outputName): String =
+        PdfSessionStore.write(getApplication<Application>().cacheDir, sessionId, name, bytes)
+
+    private fun storeView(bytes: ByteArray): String =
+        PdfSessionStore.write(getApplication<Application>().cacheDir, sessionId, "viewer.pdf", bytes)
+
+    private fun readOutput(): ByteArray? = PdfSessionStore.read(_state.value.outputPath)
+    private fun readView(): ByteArray? = PdfSessionStore.read(_state.value.viewPath)
 
     fun addFiles(newUris: List<Uri>) {
         viewModelScope.launch {
@@ -55,7 +75,7 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
                 },
                 needsPassword = encrypted,
                 fileLoaded = true,
-                viewBytes = bytes,
+                viewPath = bytes?.let { storeView(it) },
             )
             Analytics.log(Analytics.TOOL_USED, "pdf_add")
         }
@@ -92,7 +112,7 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
                 fileLoaded = true,
                 pageCount = 5,
                 status = "2 sample PDFs merged into 5 pages — tap Save result",
-                output = bytes,
+                outputPath = storeOutput(bytes, "sample-merged.pdf"),
             )
             Analytics.log(Analytics.EXPORT_SUCCESS, "pdf_sample_merge")
         }
@@ -112,7 +132,7 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
             val resultFiles = streams.size
             val bytes = runCatching { repo.merge(streams) }
             bytes.onSuccess { result ->
-                _state.value = _state.value.copy(output = result, status = "Merged $resultFiles PDF(s)")
+                _state.value = _state.value.copy(outputPath = storeOutput(result, "merged.pdf"), status = "Merged $resultFiles PDF(s)")
                 Analytics.log(Analytics.EXPORT_SUCCESS, "pdf_merge")
             }.onFailure { _state.value = _state.value.copy(status = "Merge failed: ${it.message}") }
         }
@@ -130,7 +150,7 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
             }
             val bytes = runCatching { repo.extractPages(stream, ranges) }
             bytes.onSuccess { result ->
-                _state.value = _state.value.copy(output = result, status = "Extracted pages $ranges")
+                _state.value = _state.value.copy(outputPath = storeOutput(result, "extracted.pdf"), status = "Extracted pages $ranges")
                 Analytics.log(Analytics.EXPORT_SUCCESS, "pdf_extract")
             }.onFailure { _state.value = _state.value.copy(status = "Extract failed: ${it.message}") }
         }
@@ -145,7 +165,7 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun applyResult(bytes: Result<ByteArray>, label: String, tool: String) {
         bytes.onSuccess { result ->
-            _state.value = _state.value.copy(output = result, status = label)
+            _state.value = _state.value.copy(outputPath = storeOutput(result), status = label)
             Analytics.log(Analytics.EXPORT_SUCCESS, tool)
         }.onFailure { _state.value = _state.value.copy(status = "$label failed: ${it.message}") }
     }
@@ -243,7 +263,7 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
 
     fun openViewer() {
         viewModelScope.launch {
-            val bytes = _state.value.output ?: sourceBytes()
+            val bytes = readOutput() ?: sourceBytes()
             if (bytes == null) {
                 _state.value = _state.value.copy(status = "Pick a PDF first")
                 return@launch
@@ -252,7 +272,7 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
                 _state.value = _state.value.copy(needsPassword = true, status = "Enter password to view")
                 return@launch
             }
-            _state.value = _state.value.copy(viewBytes = bytes, status = "Viewer ready")
+            _state.value = _state.value.copy(viewPath = storeView(bytes), status = "Viewer ready")
         }
     }
 
@@ -266,8 +286,8 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
             val result = runCatching { repo.decrypt(bytes, password) }
             result.onSuccess { plain ->
                 _state.value = _state.value.copy(
-                    output = plain,
-                    viewBytes = plain,
+                    outputPath = storeOutput(plain, "unlocked.pdf"),
+                    viewPath = storeView(plain),
                     needsPassword = false,
                     status = "Unlocked — password removed",
                     fileLoaded = true,
@@ -288,8 +308,8 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
             result.onSuccess { plain ->
                 val count = runCatching { repo.pageCount(ByteArrayInputStream(plain)) }.getOrDefault(0)
                 _state.value = _state.value.copy(
-                    output = plain,
-                    viewBytes = plain,
+                    outputPath = storeOutput(plain, "unlocked.pdf"),
+                    viewPath = storeView(plain),
                     needsPassword = false,
                     pageCount = count,
                     status = "Unlocked — viewer ready",
@@ -310,7 +330,7 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
             }
             val result = runCatching { repo.protect(bytes, password) }
             result.onSuccess { locked ->
-                _state.value = _state.value.copy(output = locked, status = "Password protection added")
+                _state.value = _state.value.copy(outputPath = storeOutput(locked, "protected.pdf"), status = "Password protection added")
                 Analytics.log(Analytics.EXPORT_SUCCESS, "pdf_protect")
             }.onFailure { _state.value = _state.value.copy(status = "Protect failed: ${it.message}") }
         }
@@ -326,7 +346,7 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
             val bytes = sourceBytes() ?: return@launch
             val result = runCatching { repo.deletePages(bytes, indices) }
             result.onSuccess { out ->
-                _state.value = _state.value.copy(output = out, status = "Deleted ${indices.size} page(s)")
+                _state.value = _state.value.copy(outputPath = storeOutput(out, "pages-removed.pdf"), status = "Deleted ${indices.size} page(s)")
                 Analytics.log(Analytics.EXPORT_SUCCESS, "pdf_delete_pages")
             }.onFailure { _state.value = _state.value.copy(status = "Delete failed: ${it.message}") }
         }
@@ -337,7 +357,7 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
             val bytes = sourceBytes() ?: return@launch
             val result = runCatching { repo.cropPages(bytes, margin) }
             result.onSuccess { out ->
-                _state.value = _state.value.copy(output = out, status = "Cropped ${margin.toInt()} pt margins")
+                _state.value = _state.value.copy(outputPath = storeOutput(out, "cropped.pdf"), status = "Cropped ${margin.toInt()} pt margins")
                 Analytics.log(Analytics.EXPORT_SUCCESS, "pdf_crop")
             }.onFailure { _state.value = _state.value.copy(status = "Crop failed: ${it.message}") }
         }
@@ -348,7 +368,7 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
             val bytes = sourceBytes() ?: return@launch
             val result = runCatching { repo.addPageNumbers(bytes) }
             result.onSuccess { out ->
-                _state.value = _state.value.copy(output = out, status = "Page numbers added")
+                _state.value = _state.value.copy(outputPath = storeOutput(out, "numbered.pdf"), status = "Page numbers added")
                 Analytics.log(Analytics.EXPORT_SUCCESS, "pdf_numbers")
             }.onFailure { _state.value = _state.value.copy(status = "Numbering failed: ${it.message}") }
         }
@@ -359,7 +379,7 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
             val bytes = sourceBytes() ?: return@launch
             val result = runCatching { repo.textWatermark(bytes, text) }
             result.onSuccess { out ->
-                _state.value = _state.value.copy(output = out, status = "Watermark '$text' added")
+                _state.value = _state.value.copy(outputPath = storeOutput(out, "watermarked.pdf"), status = "Watermark '$text' added")
                 Analytics.log(Analytics.EXPORT_SUCCESS, "pdf_watermark")
             }.onFailure { _state.value = _state.value.copy(status = "Watermark failed: ${it.message}") }
         }
@@ -371,8 +391,8 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
             val result = runCatching { repo.pagesToImages(bytes, quality) }
             result.onSuccess { list ->
                 _state.value = _state.value.copy(
-                    images = list,
-                    output = list.firstOrNull(),
+                    imagePaths = list.mapIndexed { i, image -> storeOutput(image, "page-${i + 1}.jpg") },
+                    outputPath = list.firstOrNull()?.let { storeOutput(it, "page-1.jpg") },
                     outputName = "pdf-pocket-page1.jpg",
                     status = "Exported ${list.size} page(s) as JPEG — saving page 1",
                 )
@@ -390,7 +410,7 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
             val result = runCatching { repo.imagesToPdf(images) }
             result.onSuccess { out ->
                 _state.value = _state.value.copy(
-                    output = out,
+                    outputPath = storeOutput(out, "images-to-pdf.pdf"),
                     outputName = "images-to-pdf.pdf",
                     status = "Converted ${images.size} image(s) to PDF",
                 )
@@ -419,8 +439,8 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
             if (bytes == null) return@launch
             runCatching { repo.decrypt(bytes, password) }.onSuccess { plain ->
                 _state.value = _state.value.copy(
-                    viewBytes = plain,
-                    output = plain,
+                    viewPath = storeView(plain),
+                    outputPath = storeOutput(plain, "unlocked.pdf"),
                     needsPassword = false,
                     pageCount = runCatching { repo.pageCount(ByteArrayInputStream(plain)) }.getOrDefault(0),
                     status = "Unlocked for editing",
@@ -434,7 +454,7 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
 
     fun applySelected(tool: String, extra: String = "") {
         viewModelScope.launch {
-            val bytes = _state.value.viewBytes ?: sourceBytes() ?: return@launch
+            val bytes = readView() ?: sourceBytes() ?: return@launch
             val indices = selectedIndices()
             val result = runCatching {
                 when (tool) {
@@ -449,7 +469,7 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
             }
             result.onSuccess { out ->
                 _state.value = _state.value.copy(
-                    output = out,
+                    outputPath = storeOutput(out, "$tool.pdf"),
                     status = "$tool applied to ${if (indices.isEmpty()) "all pages" else indices.size.toString() + " page(s)"}",
                 )
             }.onFailure { _state.value = _state.value.copy(status = "$tool failed: ${it.message}") }
@@ -458,12 +478,12 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
 
     fun exportSelectedImages(quality: Int) {
         viewModelScope.launch {
-            val bytes = _state.value.viewBytes ?: sourceBytes() ?: return@launch
+            val bytes = readView() ?: sourceBytes() ?: return@launch
             val result = runCatching { repo.imagesForIndices(bytes, selectedIndices(), quality) }
             result.onSuccess { list ->
                 _state.value = _state.value.copy(
-                    images = list,
-                    output = list.firstOrNull(),
+                    imagePaths = list.mapIndexed { i, image -> storeOutput(image, "page-${i + 1}.jpg") },
+                    outputPath = list.firstOrNull()?.let { storeOutput(it, "page-1.jpg") },
                     outputName = "pdf-pocket-page1.jpg",
                     status = "Exported ${list.size} page(s) as JPEG; saving page 1",
                 )
@@ -472,7 +492,7 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun save(context: Context, target: Uri) {
-        val bytes = _state.value.output ?: return
+        val bytes = readOutput() ?: return
         val ok = FileGateway.writeToUri(context, bytes, target)
         _state.value = _state.value.copy(
             status = if (ok) "Saved PDF to chosen location" else "Save failed",
@@ -480,7 +500,7 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun consumeOutput() {
-        _state.value = _state.value.copy(output = null)
+        _state.value = _state.value.copy(outputPath = null)
     }
 
     private fun displayName(uri: Uri): String {

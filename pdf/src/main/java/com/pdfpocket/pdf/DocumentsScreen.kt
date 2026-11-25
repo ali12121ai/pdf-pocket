@@ -32,6 +32,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,15 +52,16 @@ import com.pdfpocket.coreui.TopBar
 data class DevicePdf(val uri: Uri, val name: String, val size: Long)
 
 @Composable
-fun DocumentsScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
+fun DocumentsScreen(modifier: Modifier = Modifier, sessionId: String = "documents", onBack: () -> Unit) {
     val context = LocalContext.current
-    val vm: PdfViewModel = viewModel(key = "viewer")
+    val vm: PdfViewModel = viewModel(key = sessionId)
     val ui by vm.state.collectAsState()
     val repo = remember { PdfRepository(context) }
     var documents by remember { mutableStateOf<List<DevicePdf>>(emptyList()) }
     var password by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
     var viewerOpen by remember { mutableStateOf(false) }
+    var viewerBytes by remember { mutableStateOf<ByteArray?>(null) }
     var openAfterUnlock by remember { mutableStateOf(false) }
     val thumbs = remember { mutableStateMapOf<Uri, Bitmap>() }
 
@@ -71,6 +73,7 @@ fun DocumentsScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
     }
 
     LaunchedEffect(Unit) {
+        vm.setSession(sessionId)
         val list = mutableListOf<DevicePdf>()
         val uri = MediaStore.Files.getContentUri("external")
         val projection = arrayOf(
@@ -114,20 +117,26 @@ fun DocumentsScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
         }
     }
 
-    LaunchedEffect(ui.needsPassword, ui.viewBytes) {
+    LaunchedEffect(ui.needsPassword, ui.viewPath) {
         if (ui.needsPassword) {
             password = ""
             showPassword = true
-        } else if (ui.viewBytes != null && !showPassword) {
-            viewerOpen = true
+        } else if (ui.viewPath != null && !showPassword) {
+            viewerBytes = PdfSessionStore.read(ui.viewPath)
+            if (viewerBytes != null) viewerOpen = true
         }
     }
 
-    LaunchedEffect(ui.viewBytes, openAfterUnlock) {
-        if (openAfterUnlock && ui.viewBytes != null) {
-            viewerOpen = true
+    LaunchedEffect(ui.viewPath, openAfterUnlock) {
+        if (openAfterUnlock && ui.viewPath != null) {
+            viewerBytes = PdfSessionStore.read(ui.viewPath)
+            if (viewerBytes != null) viewerOpen = true
             openAfterUnlock = false
         }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { vm.dispose() }
     }
 
     if (showPassword) {
@@ -152,11 +161,15 @@ fun DocumentsScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
         )
     }
 
-    if (viewerOpen && ui.viewBytes != null) {
+    if (viewerOpen && viewerBytes != null) {
         PdfViewerScreen(
-            bytes = ui.viewBytes!!,
+            bytes = viewerBytes!!,
             pageCount = ui.pageCount,
-            onClose = { viewerOpen = false; vm.consumeOutput() },
+            onClose = {
+                viewerOpen = false
+                viewerBytes = null
+                vm.dispose()
+            },
             modifier = modifier,
         )
         return

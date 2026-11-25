@@ -111,7 +111,7 @@ class PdfRepository(private val context: Context?) {
         PDDocument.load(ByteArrayInputStream(bytes)).use { doc ->
             val selected = indices.filter { it in 0 until doc.numberOfPages }.toSet()
             repeat(doc.numberOfPages) { i ->
-                if (selected.isEmpty() || i in selected) {
+                if (i in selected) {
                     val page = doc.getPage(i)
                     page.rotation = (page.rotation + degrees) % 360
                 }
@@ -126,7 +126,7 @@ class PdfRepository(private val context: Context?) {
         PDDocument.load(ByteArrayInputStream(bytes)).use { doc ->
             val selected = indices.filter { it in 0 until doc.numberOfPages }.toSet()
             repeat(doc.numberOfPages) { i ->
-                if (selected.isEmpty() || i in selected) {
+                if (i in selected) {
                     val page = doc.getPage(i)
                     val box = page.cropBox
                     page.cropBox = PDRectangle(
@@ -147,7 +147,7 @@ class PdfRepository(private val context: Context?) {
         PDDocument.load(ByteArrayInputStream(bytes)).use { doc ->
             val selected = indices.filter { it in 0 until doc.numberOfPages }.toSet()
             repeat(doc.numberOfPages) { i ->
-                if (selected.isEmpty() || i in selected) {
+                if (i in selected) {
                     val page = doc.getPage(i)
                     val content = PDPageContentStream(doc, page, true, true)
                     content.beginText()
@@ -168,7 +168,7 @@ class PdfRepository(private val context: Context?) {
         PDDocument.load(ByteArrayInputStream(bytes)).use { doc ->
             val selected = indices.filter { it in 0 until doc.numberOfPages }.toSet()
             repeat(doc.numberOfPages) { i ->
-                if (selected.isEmpty() || i in selected) {
+                if (i in selected) {
                     val page = doc.getPage(i)
                     val content = PDPageContentStream(doc, page, true, true)
                     content.beginText()
@@ -195,7 +195,7 @@ class PdfRepository(private val context: Context?) {
         try {
             val selected = indices.toSet()
             for (i in 0 until renderer.pageCount) {
-                if (selected.isNotEmpty() && i !in selected) continue
+                if (i !in selected) continue
                 val pdfPage = renderer.openPage(i)
                 val bitmap = Bitmap.createBitmap((pdfPage.width * scale).toInt(), (pdfPage.height * scale).toInt(), Bitmap.Config.ARGB_8888)
                 pdfPage.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)

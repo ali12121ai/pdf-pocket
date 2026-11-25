@@ -41,9 +41,10 @@ import com.pdfpocket.coreui.PocketTheme
 fun PdfToolScreen(modifier: Modifier = Modifier, onSettings: () -> Unit = {}) {
     var activeTool by remember { mutableStateOf<ToolKey?>(null) }
     var documentsOpen by remember { mutableStateOf(false) }
+    var session by remember { mutableStateOf(0) }
 
     if (documentsOpen) {
-        DocumentsScreen(modifier = modifier, onBack = { documentsOpen = false })
+        DocumentsScreen(modifier = modifier, sessionId = "documents-${session}", onBack = { documentsOpen = false })
         return
     }
 
@@ -62,44 +63,44 @@ fun PdfToolScreen(modifier: Modifier = Modifier, onSettings: () -> Unit = {}) {
         Spacer(Modifier.height(20.dp))
         SectionTitle("Documents")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ToolTile(Icons.Default.Description, "View PDF", "Device files", { documentsOpen = true }, Modifier.weight(1f))
+            ToolTile(Icons.Default.Description, "View PDF", "Device files", { session += 1; documentsOpen = true }, Modifier.weight(1f))
         }
         Spacer(Modifier.height(16.dp))
         SectionTitle("PDF tools")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ToolTile(Icons.Default.CallMerge, "Merge", "Join PDFs", { activeTool = ToolKey.MERGE }, Modifier.weight(1f))
-            ToolTile(Icons.Default.ContentCut, "Extract", "Pick pages", { activeTool = ToolKey.EXTRACT }, Modifier.weight(1f))
+            ToolTile(Icons.Default.CallMerge, "Merge", "Join PDFs", { session += 1; activeTool = ToolKey.MERGE }, Modifier.weight(1f))
+            ToolTile(Icons.Default.ContentCut, "Extract", "Pick pages", { session += 1; activeTool = ToolKey.EXTRACT }, Modifier.weight(1f))
         }
         Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ToolTile(Icons.Default.SwapVert, "Organise", "Rotate · reverse", { activeTool = ToolKey.ORGANISE }, Modifier.weight(1f))
-            ToolTile(Icons.Default.ContentCopy, "Compress", "Smaller files", { activeTool = ToolKey.COMPRESS }, Modifier.weight(1f))
+            ToolTile(Icons.Default.SwapVert, "Organise", "Rotate · reverse", { session += 1; activeTool = ToolKey.ORGANISE }, Modifier.weight(1f))
+            ToolTile(Icons.Default.ContentCopy, "Compress", "Smaller files", { session += 1; activeTool = ToolKey.COMPRESS }, Modifier.weight(1f))
         }
         Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ToolTile(Icons.Default.LockOpen, "Unlock", "Remove password", { activeTool = ToolKey.UNLOCK }, Modifier.weight(1f))
-            ToolTile(Icons.Default.Lock, "Protect", "Add password", { activeTool = ToolKey.PROTECT }, Modifier.weight(1f))
+            ToolTile(Icons.Default.LockOpen, "Unlock", "Remove password", { session += 1; activeTool = ToolKey.UNLOCK }, Modifier.weight(1f))
+            ToolTile(Icons.Default.Lock, "Protect", "Add password", { session += 1; activeTool = ToolKey.PROTECT }, Modifier.weight(1f))
         }
         Spacer(Modifier.height(16.dp))
         SectionTitle("More tools")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ToolTile(Icons.Default.ContentCut, "Delete pages", "Pick pages", { activeTool = ToolKey.DELETE }, Modifier.weight(1f))
-            ToolTile(Icons.Default.Crop, "Crop", "Pick pages", { activeTool = ToolKey.CROP }, Modifier.weight(1f))
+            ToolTile(Icons.Default.ContentCut, "Delete pages", "Pick pages", { session += 1; activeTool = ToolKey.DELETE }, Modifier.weight(1f))
+            ToolTile(Icons.Default.Crop, "Crop", "Pick pages", { session += 1; activeTool = ToolKey.CROP }, Modifier.weight(1f))
         }
         Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ToolTile(Icons.Default.Numbers, "Page numbers", "Pick pages", { activeTool = ToolKey.NUMBER }, Modifier.weight(1f))
-            ToolTile(Icons.Default.TextFields, "Watermark", "Pick pages", { activeTool = ToolKey.WATERMARK }, Modifier.weight(1f))
+            ToolTile(Icons.Default.Numbers, "Page numbers", "Pick pages", { session += 1; activeTool = ToolKey.NUMBER }, Modifier.weight(1f))
+            ToolTile(Icons.Default.TextFields, "Watermark", "Pick pages", { session += 1; activeTool = ToolKey.WATERMARK }, Modifier.weight(1f))
         }
         Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ToolTile(Icons.Default.Image, "To images", "Pick pages", { activeTool = ToolKey.TO_IMAGES }, Modifier.weight(1f))
-            ToolTile(Icons.Default.Image, "Images to PDF", "JPG/PNG → PDF", { activeTool = ToolKey.IMAGES_TO_PDF }, Modifier.weight(1f))
+            ToolTile(Icons.Default.Image, "To images", "Pick pages", { session += 1; activeTool = ToolKey.TO_IMAGES }, Modifier.weight(1f))
+            ToolTile(Icons.Default.Image, "Images to PDF", "JPG/PNG → PDF", { session += 1; activeTool = ToolKey.IMAGES_TO_PDF }, Modifier.weight(1f))
         }
         Spacer(Modifier.height(24.dp))
     }
 
     activeTool?.let { tool ->
-        ToolSheet(tool = tool, onDismiss = { activeTool = null })
+        ToolSheet(tool = tool, sessionId = "tool-${tool.name}-${session}", onDismiss = { activeTool = null })
     }
 }
