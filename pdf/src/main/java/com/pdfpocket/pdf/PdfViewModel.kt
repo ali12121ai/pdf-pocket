@@ -15,7 +15,14 @@ import java.io.File
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 
+data class PdfFileInfo(
+    val name: String,
+    val pageCount: Int,
+    val locked: Boolean,
+)
+
 data class PdfUiState(
+    val files: List<PdfFileInfo> = emptyList(),
     val fileNames: List<String> = emptyList(),
     val pageCount: Int = 0,
     val status: String = "No PDFs selected",
@@ -55,27 +62,100 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
     private fun readOutput(): ByteArray? = PdfSessionStore.read(_state.value.outputPath)
     private fun readView(): ByteArray? = PdfSessionStore.read(_state.value.viewPath)
 
-    fun addFiles(newUris: List<Uri>) {
+    fun setSelection(indices: Set<Int>) {
+        _state.value = _state.value.copy(selectedPages = indices)
+    }
+
+    fun invertSelection() {
+        val current = _state.value.selectedPages
+        _state.value = _state.value.copy(
+            selectedPages = (0 until _state.value.pageCount).toSet() - current,
+        )
+    }
+
+    fun removeFile(index: Int) {
+        if (index !in uris.indices) return
+        uris.removeAt(index)
+        sampleFiles.removeAt(index.coerceAtMost(sampleFiles.lastIndex))
+        val files = _state.value.files.toMutableList()
+        if (index in files.indices) files.removeAt(index)
+        _state.value = _state.value.copy(
+            files = files,
+            fileNames = files.map { it.name },
+            pageCount = files.sumOf { it.pageCount },
+            status = "Removed file",
+        )
+    }
+
+    fun moveFile(from: Int, to: Int) {
+        if (from !in uris.indices || to !in uris.indices || from == to) return
+        val moved = uris.removeAt(from)
+        uris.add(to, moved)
+        val files = _state.value.files.toMutableList()
+        val file = files.removeAt(from)
+        files.add(to, file)
+        _state.value = _state.value.copy(
+            files = files,
+            fileNames = files.map { it.name },
+            status = "Reordered files",
+        )
+    }
+
+    fun unlockFileAt(index: Int, password: String) {
         viewModelScope.launch {
-            uris.clear()
-            uris.addAll(newUris)
-            val names = newUris.map { displayName(it) }
-            val bytes = getApplication<Application>().contentResolver.openInputStream(newUris.first())?.use { it.readBytes() }
-            val encrypted = bytes?.let { repo.isEncrypted(it) } ?: false
-            val count = runCatching {
-                repo.pageCount(getApplication<Application>().contentResolver.openInputStream(newUris.first())!!)
-            }.getOrDefault(0)
-            _state.value = PdfUiState(
-                fileNames = names,
-                pageCount = count,
-                status = if (encrypted) {
-                    "Password protected — enter the password to view or unlock"
+            val uri = uris.getOrNull(index) ?: return@launch
+            val bytes = getApplication<Application>().contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                ?: return@launch
+            val plain = runCatching { repo.decrypt(bytes, password) }.getOrNull()
+            if (plain == null) {
+                _state.value = _state.value.copy(status = "Wrong password for ${_state.value.files[index].name}")
+                return@launch
+            }
+            val path = storeOutput(plain, "unlocked-${index}.pdf")
+            uris[index] = android.net.Uri.fromFile(java.io.File(path))
+            val files = _state.value.files.toMutableList()
+            files[index] = files[index].copy(locked = false, pageCount = runCatching { repo.pageCount(java.io.ByteArrayInputStream(plain)) }.getOrDefault(files[index].pageCount))
+            _state.value = _state.value.copy(
+                files = files,
+                fileNames = files.map { it.name },
+                pageCount = files.sumOf { it.pageCount },
+                status = "Unlocked ${files[index].name}",
+            )
+        }
+    }
+
+    fun addFiles(newUris: List<Uri>, append: Boolean = false) {
+        viewModelScope.launch {
+            if (!append) {
+                uris.clear()
+                sampleFiles.clear()
+            }
+            val files = if (append) _state.value.files.toMutableList() else mutableListOf()
+            var firstPlain: ByteArray? = null
+            newUris.forEach { uri ->
+                val bytes = getApplication<Application>().contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                val encrypted = bytes?.let { repo.isEncrypted(it) } ?: false
+                val count = if (encrypted) {
+                    0
                 } else {
-                    "${newUris.size} PDF(s) selected, $count page(s) in first file"
+                    bytes?.let { runCatching { repo.pageCount(java.io.ByteArrayInputStream(it)) }.getOrDefault(0) } ?: 0
+                }
+                uris.add(uri)
+                files.add(PdfFileInfo(displayName(uri), count, encrypted))
+                if (!encrypted && firstPlain == null) firstPlain = bytes
+            }
+            _state.value = PdfUiState(
+                files = files,
+                fileNames = files.map { it.name },
+                pageCount = files.firstOrNull()?.pageCount ?: 0,
+                status = if (files.any { it.locked }) {
+                    "Some files are password protected — enter their passwords"
+                } else {
+                    "${files.size} PDF(s) selected"
                 },
-                needsPassword = encrypted,
+                needsPassword = files.any { it.locked },
                 fileLoaded = true,
-                viewPath = bytes?.let { storeView(it) },
+                viewPath = firstPlain?.let { storeView(it) },
             )
             Analytics.log(Analytics.TOOL_USED, "pdf_add")
         }
@@ -127,6 +207,10 @@ class PdfViewModel(app: Application) : AndroidViewModel(app) {
             }
             if (streams.isEmpty()) {
                 _state.value = _state.value.copy(status = "Pick PDF files first")
+                return@launch
+            }
+            if (_state.value.files.any { it.locked }) {
+                _state.value = _state.value.copy(status = "Unlock every file before merging")
                 return@launch
             }
             val resultFiles = streams.size
