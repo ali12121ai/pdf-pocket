@@ -78,7 +78,6 @@ dependencies {
 
     // P0.1 candidates: verify resolution and on-device viability.
     implementation("com.tom-roush:pdfbox-android:2.0.27.0")
-    implementation("com.google.zxing:core:3.5.3")
     implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
 
     testImplementation("junit:junit:4.13.2")
@@ -88,6 +87,7 @@ dependencies {
     implementation("androidx.room:room-ktx:2.7.1")
     androidTestImplementation("androidx.room:room-runtime:2.7.1")
     androidTestImplementation("androidx.room:room-ktx:2.7.1")
+    androidTestImplementation("androidx.room:room-testing:2.7.1")
     androidTestImplementation("com.tom-roush:pdfbox-android:2.0.27.0")
     androidTestImplementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.2")
 }

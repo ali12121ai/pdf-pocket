@@ -20,14 +20,6 @@ data class RecentFile(
     val createdAt: Long = System.currentTimeMillis(),
 )
 
-@Entity(tableName = "qr_history")
-data class QrHistory(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val text: String,
-    val format: String,
-    val createdAt: Long = System.currentTimeMillis(),
-)
-
 @Dao
 interface PocketDao {
     @Query("SELECT * FROM recent_files ORDER BY createdAt DESC")
@@ -36,17 +28,9 @@ interface PocketDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRecent(file: RecentFile)
 
-    @Query("SELECT * FROM qr_history ORDER BY createdAt DESC")
-    fun qrHistory(): Flow<List<QrHistory>>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertQr(item: QrHistory)
-
-    @Query("DELETE FROM qr_history WHERE id = :id")
-    suspend fun deleteQr(id: Long)
 }
 
-@Database(entities = [RecentFile::class, QrHistory::class], version = 1, exportSchema = true)
+@Database(entities = [RecentFile::class], version = 2, exportSchema = true)
 abstract class PocketDatabase : RoomDatabase() {
     abstract fun dao(): PocketDao
 }

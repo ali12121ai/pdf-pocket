@@ -4,8 +4,8 @@ Status: **signed release APK built and verified** (`app-release.apk`, v2 signatu
 
 ## Listing copy (draft)
 
-**Title:** PDF Pocket: Scan, OCR & QR
-**Short description:** Free offline PDF tools, document scanner, OCR and QR codes. No account, no watermark, no limits.
+**Title:** PDF Pocket: PDF Viewer, Scanner & OCR
+**Short description:** Free offline PDF viewer, editor, scanner and OCR. No account, no watermark, no limits.
 
 **Full description:**
 PDF Pocket puts the tools you use every day in one offline app.
@@ -20,7 +20,7 @@ PDF Pocket puts the tools you use every day in one offline app.
 
 Everything runs on your device. No sign-in, no upload, no watermark, no daily limit. Ads keep it free; remove them with a one-time purchase.
 
-**Keyword clusters:** pdf editor / merge pdf / split pdf; document scanner / scan to pdf / ocr; qr code generator / qr scanner / qr batch.
+**Keyword clusters:** pdf viewer / pdf editor / merge pdf / split pdf; document scanner / scan to pdf / ocr; password remove / compress pdf / page numbers.
 
 ## Screenshots
 
@@ -32,11 +32,11 @@ See `docs/PRIVACY.md`. It must be published at a public URL before the Play list
 
 ## Data safety answers (draft)
 
-- **Data collected:** purchase/entitlement state (local Preferences), QR history and recent files (local Room DB), ad interaction events (AdMob SDK), approximate consent state (UMP). No file contents, names, or OCR text leave the device.
+- **Data collected:** purchase/entitlement state (local Preferences), recent files (local Room DB), ad interaction events (AdMob SDK), approximate consent state (UMP). No file contents, names, or OCR text leave the device.
 - **Purposes:** app functionality, advertising, monetisation.
 - **Shared with:** Google AdMob (ads), Google Play Billing (purchase).
 - **Encryption in transit:** standard SDK HTTPS.
-- **Deletion:** in-app History → X removes QR rows; app uninstall removes all local data. No account means no server-side data to delete.
+- **Deletion:** app uninstall removes all local data. No account means no server-side data to delete.
 - **Children:** app is not directed at children; Families policy not applied.
 
 ## Placeholders you must replace before release

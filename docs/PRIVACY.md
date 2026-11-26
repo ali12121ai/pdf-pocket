@@ -10,12 +10,12 @@ PDF Pocket ("we", "the app") processes documents on your device. This policy exp
 
 ## What the app stores on your device
 
-- Recent file records and QR history in a local Room database.
+- Recent file records in a local Room database.
 - A local preference recording whether ads were removed.
 - Temporary working files in the app cache, cleaned after 24 hours.
 - Arabic OCR model data (bundled in the app and copied to app-private storage on first use).
 
-You can delete QR history in-app (History → X). Uninstalling the app removes all local data.
+Uninstalling the app removes all local data.
 
 ## What third-party SDKs process
 
@@ -25,7 +25,7 @@ You can delete QR history in-app (History → X). Uninstalling the app removes a
 
 ## Permissions
 
-- Camera: only when you choose to scan a document or decode a QR code.
+- Camera: only when you choose to scan a document.
 - Internet: needed only to load ads and process purchases.
 
 ## Children

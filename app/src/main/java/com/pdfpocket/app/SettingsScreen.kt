@@ -110,7 +110,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             Column(Modifier.padding(16.dp)) {
                 SectionTitle("About")
                 Text("PDF Pocket · version 0.1.0", style = MaterialTheme.typography.bodyMedium)
-                Text("PDF tools, scanner, OCR and QR codes in one offline app.", style = MaterialTheme.typography.bodySmall)
+                Text("PDF tools, scanner and OCR in one offline app.", style = MaterialTheme.typography.bodySmall)
             }
         }
         Spacer(Modifier.height(24.dp))

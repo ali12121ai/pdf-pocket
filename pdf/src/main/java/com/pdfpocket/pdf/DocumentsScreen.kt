@@ -69,7 +69,7 @@ fun DocumentsScreen(modifier: Modifier = Modifier, sessionId: String = "document
     val vm: PdfViewModel = viewModel(key = sessionId)
     val ui by vm.state.collectAsState()
     val repo = remember { PdfRepository(context) }
-    val db = remember { Room.databaseBuilder(context, PocketDatabase::class.java, "pocket.db").build() }
+    val db = remember { Room.databaseBuilder(context, PocketDatabase::class.java, "pocket.db").addMigrations(com.pdfpocket.data.MIGRATION_1_2).build() }
     val recents by db.dao().recentFiles().collectAsState(initial = emptyList())
     var documents by remember { mutableStateOf<List<DevicePdf>>(emptyList()) }
     var folders by remember { mutableStateOf(FolderStore.list(context)) }
