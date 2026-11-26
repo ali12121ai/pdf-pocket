@@ -24,7 +24,7 @@ Everything runs on your device. No sign-in, no upload, no watermark, no daily li
 
 ## Screenshots
 
-Real captures from the release build (regenerated 2026-11-24 after adding viewer, unlock/protect and page tools): `docs/store/screenshots/tools.png`, `viewer.png`, `scan.png`, `history.png`, `settings.png`.
+Real captures from the P12 release build (regenerated 2026-11-26): `docs/store/screenshots/tools.png`, `documents.png`, `scan.png`, `history.png`, `settings.png`.
 
 ## Privacy policy
 

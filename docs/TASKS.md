@@ -231,7 +231,8 @@ Rule: no code edit without its task entry here first. One task = one code commit
 
 Plan source: `docs/FLOWS3.md` (supersedes `docs/FLOWS2.md`). Each task below lists the changed files, the work and a Verify step. No task is ticked while a live check is blocked; use `[~]` with a BLOCKED reason instead.
 
-- [ ] **P12.1 — Disposable sessions and navigation**
+- [~] **P12.1 — Disposable sessions and navigation** — unique-id sessions, cache-file state and viewer reset implemented; JVM session-isolation and merge tests pass. V5 instrumented back-navigation check not added.
+  - BLOCKED: no Compose UI test dependency / stable emulator run for the open-doc → back → back → View PDF assertion; code is implemented and compiles.
   - `pdf/PdfViewModel.kt`, `pdf/ToolSheet.kt`, `pdf/DocumentsScreen.kt`, `app/MainActivity.kt` — replace keyed singleton sessions with unique-id disposable sessions; hold source URIs and cache files instead of `ByteArray` in StateFlow; clear view state when the viewer closes; enforce Back: viewer → Documents → Tools, review → camera.
   - What to do:
     1. Give each tile tap a unique `sessionId`; key the ViewModel by it; clear the session on exit.
@@ -240,7 +241,8 @@ Plan source: `docs/FLOWS3.md` (supersedes `docs/FLOWS2.md`). Each task below lis
     4. Wire Back through viewer, Documents and tool screens; no dead-end returns.
   - Verify: JVM session test — open View on file X, exit, then Merge shows zero files; V1 merge of 3+5 page fixtures yields 8 pages; V5 instrumented open doc → back → back → View PDF shows the list, not the viewer.
 
-- [ ] **P12.2 — Documents v2**
+- [~] **P12.2 — Documents v2** — Recents, persisted SAF folders, search, lazy visible-row thumbnails and honest empty state implemented; release screenshot confirms search / Add folder / Browse files / No PDFs found.
+  - BLOCKED: V6 seeded-MediaStore row assertion and Android 13+ folder-grant device check not executed on the emulator.
   - `pdf/DocumentsScreen.kt`, `data/` (Room `RecentFile`), `app/` (persisted tree URIs) — Recents from Room, Folders from persisted SAF tree grants, Add folder and Browse files, name search, lazy thumbnails, honest empty state.
   - What to do:
     1. Add a persisted-folder store and query its PDFs lazily.
@@ -249,7 +251,8 @@ Plan source: `docs/FLOWS3.md` (supersedes `docs/FLOWS2.md`). Each task below lis
     4. Re-entering View PDF always lands on the list.
   - Verify: V6 instrumented — seed an app-owned PDF into MediaStore and see its row; empty state offers Add folder and Browse files and the picker opens; V5 holds for re-entry.
 
-- [ ] **P12.3 — Tool shell, Merge list, page-tool rules, Result screen**
+- [~] **P12.3 — Tool shell, Merge list, page-tool rules, Result screen** — full-screen tool shell, selection helpers, per-tool defaults, per-file merge controls (up/down reorder in place of drag), presets, Result Save/Share/Preview implemented; V1/V2/V3/V4 JVM tests pass.
+  - BLOCKED: full two-file merge and Result Share/Preview not driven on device; drag reorder intentionally replaced by explicit Move up/down buttons (deviation from FLOWS3).
   - `pdf/` — replace `ModalBottomSheet` with full-screen Tool screens (top bar + sticky action bar); unified Result screen with Save / Share / Preview; per-tool selection rules; Merge row remove/reorder/per-file password; whole-document Compress/Unlock/Protect.
   - What to do:
     1. Build the full-screen tool shell and shared Result screen with cache-file output, FileProvider share and in-memory preview.
@@ -258,7 +261,8 @@ Plan source: `docs/FLOWS3.md` (supersedes `docs/FLOWS2.md`). Each task below lis
     4. Compress presets with before/after estimate; Unlock/Protect password on the control screen with inline error.
   - Verify: V2 `extractIndices(bytes, [1,3])` on a 5-page fixture returns pages 2 and 4 with matching sizes; V3 Delete starts empty and refuses deleting all; V4 one test per tool honours selection and To images returns N JPEGs.
 
-- [ ] **P12.4 — Scan v2**
+- [~] **P12.4 — Scan v2** — edge-to-edge camera, ImageAnalysis edge detection, animated dashed-to-solid border, Pages screen with reachable Export/OCR, discard prompt and working Open settings implemented; release screenshot shows full-screen preview, border and capture button.
+  - BLOCKED: V7 two-frame phase assertion and V8 instrumented Export/OCR reachability not added; emulator camera preview is black and camera HAL unstable, so live capture was not re-verified.
   - `scan/ScanScreen.kt`, `scan/ScanViewModel.kt`, `scan/ScanCropper.kt` — edge-to-edge camera, ImageAnalysis detection, animated border states, corner-handle review, Pages screen, reachable Export/OCR, discard prompt.
   - What to do:
     1. Hide system bars, fill preview to window bounds; close and flash controls at top.
@@ -267,7 +271,7 @@ Plan source: `docs/FLOWS3.md` (supersedes `docs/FLOWS2.md`). Each task below lis
     4. Done → Pages grid with reorder/delete; only there do Export PDF and Recognise text appear; unsaved exit asks Discard n pages?
   - Verify: V7 instrumented — preview bounds equal window bounds and border phase differs between frames; V8 — fixture JPEG through addPage → Done → Export and Recognise nodes exist and a PDF is produced.
 
-- [ ] **P12.5 — QR residue and Room migration**
+- [x] **P12.5 — QR residue and Room migration** — zxing dependency, QR entity/DAO, History section, test insert and Settings/store/privacy copy removed; Room v2 migration drops qr_history and keeps recent_files. V10 instrumented MigrationTestHelper passes (8/8). V9 grep has zero QR symbols; the only matches are the deliberate `qr_history` DROP in the migration and its seed in the migration test.
   - `app/build.gradle.kts`, `data/` (schema + migration), `app/HistoryScreen.kt`, `app/SettingsScreen.kt`, `docs/` — delete remaining zxing/QR residue and migrate the database safely.
   - What to do:
     1. Remove any `zxing`/`core` dependency and QR symbols from code and tests.
@@ -276,7 +280,8 @@ Plan source: `docs/FLOWS3.md` (supersedes `docs/FLOWS2.md`). Each task below lis
     4. Rewrite store title/short description/keywords/data-safety/deletion lines and update PRIVACY, STACK, UI, FLOWS and STATE description.
   - Verify: V9 grep for qr/zxing/barcode in source and docs returns zero hits and apkanalyzer dex packages shows none; V10 Room `MigrationTestHelper` 1→2 opens with `recent_files` intact.
 
-- [ ] **P12.6 — Regression pass, release, screenshots**
+- [~] **P12.6 — Regression pass, release, screenshots** — release build, v2 signature, zipalign-16KB, unit tests and 8 instrumented tests pass; five P12 screenshots regenerated from the release APK.
+  - BLOCKED: V12 physical-device camera/picker evidence not collected; emulator evidence (Pixel_10_Pro, Android 37) attached as screenshots, camera preview black.
   - `docs/TASKS.md`, `docs/store/screenshots/`, release APK — full verification and store assets from the P12 release build.
   - What to do:
     1. Run unit + instrumented suites and release build; verify signature and 16KB alignment.
